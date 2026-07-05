@@ -1,34 +1,60 @@
 You are classifying companies by their RELATIONSHIP to a seed company, for B2B lookalike
-search quality. The seed's sales team wants COMPETITORS/PEERS of the seed — companies a
-seller could target the same way they'd target the seed. They do NOT want companies that
-merely orbit the seed's ecosystem.
+search quality. The benchmark's judge accepts a candidate only when it is "clearly the same
+kind of company (same model + overlapping customer)" and its rule is: WHEN IN DOUBT about
+product-vs-services, REJECT. Your job is to predict that judgment from the description text.
 
 Seed company:
 Name: {{SEED_NAME}} ({{SEED_DOMAIN}})
 Description: {{SEED_DESC}}
 
 Classify each candidate below into exactly one role:
-- "peer"      = sells a competing/equivalent product to a similar buyer. A genuine lookalike.
-- "servicer"  = agency, consultancy, implementation partner, or services firm that DEPLOYS,
-                INTEGRATES, or SERVES the seed's product/category rather than competing with it.
-- "tool"      = product that plugs into / extends / manages the seed's platform (app, plugin,
-                extension, add-on, ops tool for the seed's users).
+- "peer"      = a SOFTWARE/PRODUCT VENDOR selling a competing or adjacent offering to the
+                seed's buyer type. Company SIZE DOES NOT MATTER — a tiny vendor in the same
+                category is still a peer. Adjacent product categories COUNT as peer when the
+                buyer strongly overlaps (e.g. a cloud data/analytics platform sold to the
+                same industry's enterprises).
+- "servicer"  = agency, consultancy, implementation partner, "solutions provider", or
+                services firm. CRITICAL: many services firms describe themselves with
+                product-like words ("offers QMS modules", "provides cloud solutions for X").
+                Signals of servicer: "consulting", "services", "implementations", "partner",
+                "specializing in <seed> deployments", "helps companies adopt/implement",
+                built ON another vendor's platform (e.g. "Salesforce-powered solutions").
+                If the description is genuinely AMBIGUOUS between product company and
+                services company, classify servicer — the judge defaults to reject.
+- "tool"      = product that plugs into / extends / manages the seed's platform specifically
+                (app, plugin, extension, add-on, ops tool for the seed's users).
 - "self"      = the seed itself, a subsidiary, or a regional variant of the seed.
-- "unrelated" = different category or unclear.
+- "unrelated" = different industry or different buyer entirely.
 
+Calibration examples from REAL judge verdicts (seed = Veeva, life sciences cloud software):
+- Ennov, "life sciences software: regulatory, quality, clinical" -> peer (same category vendor)
+- Agatha Inc., "cloud document/quality management for life sciences" (66 employees) -> peer
+  (small but same category product vendor -> judge accepted; size does not matter)
+- Scitara, "lab-specific cloud software for life sciences" -> peer (adjacent product,
+  same buyer -> judge accepted)
+- SHYFT Analytics, "cloud data management and analytics for pharma/biotech" -> peer
+  (adjacent SaaS, same buyer base -> judge accepted)
+- p36 GmbH, "cloud solutions for regulatory and compliance in life sciences" -> servicer
+  ("solutions" + consulting vibe, no clear own product -> judge rejected)
+- Court Square Group, "regulatory submission, EDMS and QMS software/services" -> servicer
+  (software/services mix reads as services provider -> judge rejected)
+- Mavens, "Salesforce-powered solutions for life sciences" -> servicer (builds on another
+  platform = implementation firm -> judge rejected)
+- Fipsar, "consultancy specializing in Veeva implementations" -> servicer
+- IDBS, "powerful cloud software and services for the BioPharma sector across the product
+  lifecycle" -> peer (names a broad product suite spanning the lifecycle -> judge accepted;
+  'and services' is fine when a real product suite is the headline)
+- Veeva Systems APAC -> self
 Calibration examples (seed = Shopify, commerce platform for merchants):
 - Prodigy Commerce, "e-commerce platform for merchants with store building and payments" -> peer
 - beCommerce, "agency helping brands build Shopify stores" -> servicer
 - SparkLayer B2B, "B2B extension for Shopify merchants" -> tool
 - "Shopify B2B E-Commerce" -> self
-Calibration examples (seed = Veeva, life sciences cloud software):
-- Ennov, "life sciences software: regulatory, quality, clinical" -> peer
-- Fipsar, "consultancy specializing in Veeva implementations" -> servicer
-- Veeva Systems APAC -> self
 
 Watch for the trap: servicers and tools describe themselves USING THE SEED'S OWN WORDS,
-so they sound similar. Ask "does this company COMPETE with the seed, or does it LIVE OFF
-the seed?" Live-off = servicer/tool, never peer.
+so they sound similar. Ask: (1) does this company COMPETE with the seed or LIVE OFF the
+seed's ecosystem? (2) does it sell its OWN product, or deliver services/implementations?
+Own-product competitors and adjacents (any size) are peers; everything ambiguous is not.
 
 Candidates:
 {{ITEMS}}
