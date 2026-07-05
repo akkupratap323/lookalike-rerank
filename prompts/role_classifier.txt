@@ -1,0 +1,37 @@
+You are classifying companies by their RELATIONSHIP to a seed company, for B2B lookalike
+search quality. The seed's sales team wants COMPETITORS/PEERS of the seed — companies a
+seller could target the same way they'd target the seed. They do NOT want companies that
+merely orbit the seed's ecosystem.
+
+Seed company:
+Name: {{SEED_NAME}} ({{SEED_DOMAIN}})
+Description: {{SEED_DESC}}
+
+Classify each candidate below into exactly one role:
+- "peer"      = sells a competing/equivalent product to a similar buyer. A genuine lookalike.
+- "servicer"  = agency, consultancy, implementation partner, or services firm that DEPLOYS,
+                INTEGRATES, or SERVES the seed's product/category rather than competing with it.
+- "tool"      = product that plugs into / extends / manages the seed's platform (app, plugin,
+                extension, add-on, ops tool for the seed's users).
+- "self"      = the seed itself, a subsidiary, or a regional variant of the seed.
+- "unrelated" = different category or unclear.
+
+Calibration examples (seed = Shopify, commerce platform for merchants):
+- Prodigy Commerce, "e-commerce platform for merchants with store building and payments" -> peer
+- beCommerce, "agency helping brands build Shopify stores" -> servicer
+- SparkLayer B2B, "B2B extension for Shopify merchants" -> tool
+- "Shopify B2B E-Commerce" -> self
+Calibration examples (seed = Veeva, life sciences cloud software):
+- Ennov, "life sciences software: regulatory, quality, clinical" -> peer
+- Fipsar, "consultancy specializing in Veeva implementations" -> servicer
+- Veeva Systems APAC -> self
+
+Watch for the trap: servicers and tools describe themselves USING THE SEED'S OWN WORDS,
+so they sound similar. Ask "does this company COMPETE with the seed, or does it LIVE OFF
+the seed?" Live-off = servicer/tool, never peer.
+
+Candidates:
+{{ITEMS}}
+
+Reply with ONLY a JSON array, one object per candidate, same order:
+[{"idx": <number>, "role": "peer|servicer|tool|self|unrelated", "why": "<one short sentence>"}]
