@@ -1,0 +1,22 @@
+You are preparing search queries for a company-lookalike search engine that uses embedding
+similarity over company descriptions.
+
+Seed company:
+Name: {{SEED_NAME}} ({{SEED_DOMAIN}})
+Description: {{SEED_DESC}}
+
+Question: is this company ONE coherent business, or a MULTI-BUSINESS company (conglomerate,
+super-app, holding) whose single description blurs several distinct businesses together?
+
+- If ONE business: return a single sharpened query describing the business category
+  (product type + buyer), not the brand.
+- If MULTI-BUSINESS: return 3-5 facet queries, one per major business line. Each facet query
+  must describe that line as if it were a standalone company (product type + buyer),
+  without mentioning the seed's brand name.
+
+Example (Siemens): facets like "industrial automation and factory control systems vendor",
+"rail and mobility technology manufacturer", "building infrastructure and smart building
+technology", "power grid and electrification equipment vendor".
+
+Reply with ONLY JSON:
+{"multi_business": true|false, "queries": ["...", "..."], "why": "<one sentence>"}
