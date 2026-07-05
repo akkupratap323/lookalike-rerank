@@ -87,8 +87,13 @@ def render_judge_messages(template, cand: dict):
     ]
 
 
+import re as _re
+
+
 def parse_verdict(reply: str) -> bool:
-    """Recorded judge replies (verified): {"relevant": bool, "rationale": "..."}."""
+    """Recorded replies were {"relevant": bool, "rationale": ...}; live gpt-5.4-mini
+    also answers 'relevant: false\\nrationale: ...' and DeepSeek bare 'true'/'false'.
+    Handle all three, in that order."""
     try:
         obj = llm.extract_json(reply)
         if isinstance(obj, dict):
@@ -98,7 +103,14 @@ def parse_verdict(reply: str) -> bool:
                     return v if isinstance(v, bool) else str(v).lower() in ("yes", "true", "relevant", "1")
     except Exception:
         pass
+    m = _re.search(r'relevant"?\s*[:=]\s*"?(true|false|yes|no)', reply, _re.IGNORECASE)
+    if m:
+        return m.group(1).lower() in ("true", "yes")
     head = reply.strip().lower()[:80]
+    if head.startswith("true"):
+        return True
+    if head.startswith("false") or head.startswith("no"):
+        return False
     return "yes" in head or ("relevant" in head and "not relevant" not in head)
 
 
