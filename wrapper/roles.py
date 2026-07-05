@@ -20,6 +20,9 @@ def _load_prompt(seed_name, seed_domain, seed_desc):
 
 
 def _render(batch):
+    # NOTE: show the classifier the same evidence the judge sees (name/domain/description).
+    # Feeding employee_count was tried and HURT agreement (71%->63%): the judge never sees
+    # size data and happily accepts tiny same-category vendors.
     lines = []
     for i, c in enumerate(batch):
         desc = (c.get("description") or "")[:400]
@@ -38,13 +41,29 @@ async def classify_roles(candidates, seed_name, seed_domain, seed_desc):
     return candidates
 
 
+def _enrich_from_raw(cands: list, raw: dict) -> list:
+    """Baseline candidates only carry linkedin/hq; join the raw vendor response by
+    domain+name to add employee_count/revenue/industries (same data the wrapper sees)."""
+    results = (raw.get("attempts") or [{}])[0].get("vendor_calls", [{}])[0] \
+        .get("response_body", {}).get("results", []) or []
+    by_key = {(r.get("domain") or "", r.get("name") or ""): r for r in results}
+    out = []
+    for c in cands:
+        r = by_key.get((c.get("domain") or "", c.get("name") or ""))
+        extra = dict(c.get("extra") or {})
+        if r:
+            for k in ("employee_count", "revenue_usd", "funding_stage", "industries"):
+                extra.setdefault(k, r.get(k))
+        out.append({**c, "extra": extra})
+    return out
+
+
 async def validate_against_judge(seed: str):
     """Agreement check on baseline: judge said relevant<->we say peer?"""
     base = json.load(open(os.path.join(config.DATA_DIR, seed, "openfunnel.json")))
-    seed_in = base.get("config", {})
     bjson = json.load(open(os.path.join(config.DATA_DIR, seed, "openfunnel.raw.json")))
     si = bjson.get("seed_input", {})
-    cands = [dict(c) for c in base["candidates"]]
+    cands = _enrich_from_raw([dict(c) for c in base["candidates"]], bjson)
     cands = await classify_roles(cands, si.get("seed_name", seed),
                                  si.get("seed_domain", ""), si.get("description", ""))
     agree = sum(1 for c in cands if (c["role"] == "peer") == bool(c["relevant"]))
