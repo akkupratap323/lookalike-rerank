@@ -29,7 +29,10 @@ async def run(seed: str):
 
     # stage 0: facet check
     f = await facets.facet_queries(s["name"], s["domain"], s["desc"])
-    queries = f["queries"]
+    # always lead with the benchmark's literal query so the pool is a superset
+    # of the baseline's candidate pool; facet queries add recall on top
+    base_q = fetch.benchmark_query(s["name"], s["desc"])
+    queries = [base_q] + [q for q in f["queries"] if q != base_q]
     report["stages"]["facets"] = f
     print(f"[0] facets: multi={f.get('multi_business')} queries={len(queries)}")
 
