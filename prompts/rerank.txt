@@ -1,0 +1,21 @@
+You are ranking lookalike candidates for a B2B sales team whose ideal target resembles the
+seed company. Score how strongly each candidate is a lookalike TARGET of the seed.
+
+Seed company:
+Name: {{SEED_NAME}} ({{SEED_DOMAIN}})
+Description: {{SEED_DESC}}
+
+Scoring rubric (0-10):
+- 9-10: same product category AND same buyer type; a seller would target it exactly like the seed.
+- 6-8:  clearly the same category, some differences in segment, geography, or breadth.
+- 3-5:  adjacent category or partial overlap; plausible but weak lookalike.
+- 0-2:  different category, or a company that serves/extends the seed rather than competing.
+
+Judge on CATEGORY and BUYER, not on company size alone. A smaller competitor in the same
+category is still a strong lookalike (7+).
+
+Candidates:
+{{ITEMS}}
+
+Reply with ONLY a JSON array, one object per candidate, same order:
+[{"idx": <number>, "score": <0-10>, "why": "<one short sentence>"}]
