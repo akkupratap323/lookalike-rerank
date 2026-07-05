@@ -36,6 +36,7 @@ async def classify_roles(candidates, seed_name, seed_domain, seed_desc):
     rows = await llm.map_batches(client, config.WRAPPER_FAST_MODEL, prompt,
                                  candidates, config.ROLE_BATCH_SIZE, _render)
     for c, r in zip(candidates, rows):
+        r = r or {}  # row may be None if the model dropped it; treat as unclassified
         c["role"] = r.get("role", "unrelated")
         c["role_why"] = r.get("why", "")
     return candidates

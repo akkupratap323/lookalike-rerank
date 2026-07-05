@@ -68,7 +68,12 @@ async def map_batches(client, model, prompt_template: str, items: list, batch_si
             out = await chat(client, model, [{"role": "user", "content": msg}])
             rows = extract_json(out)
             if len(rows) != len(batch):
-                raise ValueError(f"batch size mismatch: sent {len(batch)}, got {len(rows)}")
+                # models occasionally drop/duplicate a row; realign via the idx field
+                if all(isinstance(r, dict) and "idx" in r for r in rows):
+                    by_idx = {int(r["idx"]): r for r in rows}
+                    rows = [by_idx.get(i) for i in range(len(batch))]  # missing -> None
+                else:
+                    raise ValueError(f"batch size mismatch: sent {len(batch)}, got {len(rows)}")
             return rows
 
     results = await asyncio.gather(*[one(b) for b in batches])

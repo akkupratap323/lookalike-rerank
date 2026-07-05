@@ -30,6 +30,7 @@ async def rerank(candidates, seed_name, seed_domain, seed_desc):
     rows = await llm.map_batches(client, config.WRAPPER_FAST_MODEL, prompt,
                                  candidates, config.RERANK_BATCH_SIZE, _render)
     for c, r in zip(candidates, rows):
+        r = r or {}  # row may be None if the model dropped it
         c["rerank_score"] = float(r.get("score", 0))
         c["rerank_why"] = r.get("why", "")
     # sort: score desc, then original source rank asc (stable tiebreak)
