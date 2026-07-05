@@ -8,11 +8,15 @@ Description: {{SEED_DESC}}
 Scoring rubric (0-10):
 - 9-10: same product category AND same buyer type; a seller would target it exactly like the seed.
 - 6-8:  clearly the same category, some differences in segment, geography, or breadth.
-- 3-5:  adjacent category or partial overlap; plausible but weak lookalike.
+- 3-5:  adjacent category or partial overlap; plausible but weak lookalike. Also use this
+        band for borderline cases a strict evaluator might reject: narrow single-workflow
+        platforms vs a broad-suite seed, "software and services" mixes with no clear
+        flagship product, and sub-function-only vendors.
 - 0-2:  different category, or a company that serves/extends the seed rather than competing.
 
 Judge on CATEGORY and BUYER, not on company size alone. A smaller competitor in the same
-category is still a strong lookalike (7+).
+category is still a strong lookalike (7+). Rank confident direct competitors above
+adjacent/borderline ones — the top of the list should be unambiguous.
 
 Candidates:
 {{ITEMS}}
