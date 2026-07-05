@@ -28,58 +28,67 @@ def _load_baseline(seed: str) -> dict:
 
 
 def extract_judge_template(seed: str):
-    """Take one recorded judge call and turn it into a template by replacing that
-    call's candidate name/domain/description with placeholders.
+    """Rebuild the literal judge messages from a recorded call.
 
-    Returns (messages_template, note). Raises with a clear message if the raw file
-    doesn't contain judge_calls — in that case inspect the file and adapt here.
+    Verified shape (2026-07-05): raw["attempts"][0]["judge_calls"][*] =
+    {model, messages:[system, user], raw_response, parsed_response, for_candidate_rank, ...}
+    The system message and the user message's SEED block are byte-identical across
+    all 100 calls, so we keep them verbatim and rebuild only the CANDIDATE block:
+
+        CANDIDATE:
+          name: <name>
+          domain: <domain>
+          description: <description>
+          extras: {"linkedin_url": ..., "headquarters": ...}   # nulls dropped
+
+    Returns (messages_template, note).
     """
     raw = _load_raw(seed)
-    judge_calls = raw.get("judge_calls") or []
+    attempts = raw.get("attempts") or []
+    judge_calls = (attempts[0].get("judge_calls") if attempts else None) or raw.get("judge_calls") or []
     if not judge_calls:
         raise RuntimeError(
-            f"{seed}/openfunnel.raw.json has no judge_calls[]. "
+            f"{seed}/openfunnel.raw.json has no attempts[0].judge_calls[]. "
             "Open the file, find where the judge messages live, and adapt "
             "extract_judge_template()."
         )
-    call = judge_calls[0]
-    cand = call.get("candidate") or {}
-    messages = call["messages"]
-    baseline = _load_baseline(seed)
-    if not cand:  # fall back: identify the candidate by matching rank-1 fields
-        cand = baseline["candidates"][0]
+    messages = judge_calls[0]["messages"]
+    system_msg = messages[0]["content"]
+    user_msg = messages[1]["content"]
+    if "CANDIDATE:" not in user_msg:
+        raise RuntimeError(f"{seed}: recorded judge user message has no CANDIDATE: block")
+    seed_block = user_msg.split("CANDIDATE:")[0]
+    template = [
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": seed_block},  # candidate block appended at render time
+    ]
+    return template, "ok (rebuilt from attempts[0].judge_calls[0])"
 
-    def templ(text: str) -> str:
-        for key, ph in (("name", "{{CAND_NAME}}"), ("domain", "{{CAND_DOMAIN}}"),
-                        ("description", "{{CAND_DESC}}")):
-            val = (cand.get(key) or "").strip()
-            if val:
-                text = text.replace(val, ph)
-        return text
 
-    template = [{"role": m["role"], "content": templ(m["content"])} for m in messages]
-    joined = "".join(m["content"] for m in template)
-    missing = [p for p in ("{{CAND_NAME}}",) if p not in joined]
-    note = "ok" if not missing else f"WARNING: placeholders not found: {missing}"
-    return template, note
+def _candidate_block(cand: dict) -> str:
+    """Byte-exact reconstruction of the benchmark's CANDIDATE block.
+    Verified across all 7 seeds: the domain line is OMITTED when empty;
+    extras = {linkedin_url, headquarters} with nulls dropped, never empty."""
+    extra = cand.get("extra") or {}
+    extras = {k: extra.get(k) for k in ("linkedin_url", "headquarters") if extra.get(k)}
+    lines = ["CANDIDATE:", f"  name: {cand.get('name') or ''}"]
+    if cand.get("domain"):
+        lines.append(f"  domain: {cand['domain']}")
+    lines.append(f"  description: {cand.get('description') or ''}")
+    lines.append(f"  extras: {json.dumps(extras, ensure_ascii=False)}")
+    return "\n".join(lines)
 
 
 def render_judge_messages(template, cand: dict):
+    system_msg, seed_block = template[0], template[1]
     return [
-        {
-            "role": m["role"],
-            "content": m["content"]
-            .replace("{{CAND_NAME}}", cand.get("name") or "")
-            .replace("{{CAND_DOMAIN}}", cand.get("domain") or "")
-            .replace("{{CAND_DESC}}", cand.get("description") or ""),
-        }
-        for m in template
+        system_msg,
+        {"role": "user", "content": seed_block["content"] + _candidate_block(cand)},
     ]
 
 
 def parse_verdict(reply: str) -> bool:
-    """Benchmark judge returns a binary relevance label + rationale.
-    Adapt once you see the literal recorded reply format in raw.json."""
+    """Recorded judge replies (verified): {"relevant": bool, "rationale": "..."}."""
     try:
         obj = llm.extract_json(reply)
         if isinstance(obj, dict):
@@ -90,7 +99,7 @@ def parse_verdict(reply: str) -> bool:
     except Exception:
         pass
     head = reply.strip().lower()[:80]
-    return "yes" in head or "relevant" in head and "not relevant" not in head
+    return "yes" in head or ("relevant" in head and "not relevant" not in head)
 
 
 # ---------- scoring ----------
