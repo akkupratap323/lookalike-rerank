@@ -4,3 +4,5 @@ __pycache__/
 data/
 runs/
 *.pyc
+.DS_Store
+*-resume/
