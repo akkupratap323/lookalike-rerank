@@ -54,6 +54,33 @@ def extract_json(text: str):
     raise ValueError("no complete JSON found in model reply")
 
 
+def _row_idx(row, n: int):
+    """The batch position a row names in its idx field, or None if it names none."""
+    if not isinstance(row, dict):
+        return None
+    try:
+        i = int(row.get("idx"))
+    except (TypeError, ValueError):
+        return None
+    return i if 0 <= i < n else None
+
+
+def align_rows(rows: list, n: int) -> list:
+    """Put each row back at the batch position its idx names.
+
+    Models sometimes reorder rows (e.g. sorted by score) or drop one and repeat another,
+    so a matching count does not mean matching order. When every row names a position,
+    align by idx (missing -> None). Otherwise fall back to order, which needs the counts
+    to match."""
+    idxs = [_row_idx(r, n) for r in rows]
+    if rows and all(i is not None for i in idxs):
+        by_idx = dict(zip(idxs, rows))
+        return [by_idx.get(i) for i in range(n)]
+    if len(rows) != n:
+        raise ValueError(f"batch size mismatch: sent {n}, got {len(rows)}")
+    return rows
+
+
 async def map_batches(client, model, prompt_template: str, items: list, batch_size: int,
                       render, concurrency: int = None):
     """Run prompt over items in batches, concurrently. `render(batch)->str` fills the prompt.
@@ -66,15 +93,7 @@ async def map_batches(client, model, prompt_template: str, items: list, batch_si
         async with sem:
             msg = prompt_template.replace("{{ITEMS}}", render(batch))
             out = await chat(client, model, [{"role": "user", "content": msg}])
-            rows = extract_json(out)
-            if len(rows) != len(batch):
-                # models occasionally drop/duplicate a row; realign via the idx field
-                if all(isinstance(r, dict) and "idx" in r for r in rows):
-                    by_idx = {int(r["idx"]): r for r in rows}
-                    rows = [by_idx.get(i) for i in range(len(batch))]  # missing -> None
-                else:
-                    raise ValueError(f"batch size mismatch: sent {len(batch)}, got {len(rows)}")
-            return rows
+            return align_rows(extract_json(out), len(batch))
 
     results = await asyncio.gather(*[one(b) for b in batches])
     return [row for rows in results for row in rows]
